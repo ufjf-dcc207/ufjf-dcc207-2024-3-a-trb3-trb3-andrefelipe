@@ -1,0 +1,23 @@
+.prompt-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  
+  .nova-partida-btn {
+    padding: 10px 20px;
+    font-size: 18px;
+    background-color: #ffcb05;
+    color: #444;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s, transform 0.2s;
+  }
+  
+  .nova-partida-btn:hover {
+    background-color: #ffae00;
+    transform: scale(1.05);
+  }
+  
