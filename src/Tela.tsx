@@ -18,6 +18,7 @@ export default function Tela() {
   useEffect(() => {
     fetchPokemon();
   }, []);
+  
 
   async function fetchPokemon() {
     const totalPairs = 6;
