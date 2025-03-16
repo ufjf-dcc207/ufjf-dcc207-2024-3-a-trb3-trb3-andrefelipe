@@ -1,23 +1,20 @@
-import { useRef } from "react";
+import React from "react";
 import "./Prompt.css";
 
 interface PromptProps {
   onNovaPartida: () => void;
 }
 
-export default function Prompt({ onNovaPartida }: PromptProps) {
-  const refButton = useRef<HTMLButtonElement | null>(null);
-
-  function handleNovaPartida() {
-    onNovaPartida();
-    refButton.current?.blur(); // Tira o foco do botão depois de clicar
-  }
-
+const Prompt: React.FC<PromptProps> = ({ onNovaPartida }) => {
   return (
-    <div className="prompt-container">
-      <button ref={refButton} className="nova-partida-btn" onClick={handleNovaPartida}>
-        Nova Partida
-      </button>
-    </div>
+    <button className="nova-partida-btn" onClick={onNovaPartida}>
+      Nova Partida
+    </button>
   );
-}
+};
+
+export default Prompt;
+
+
+
+ 
