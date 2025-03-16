@@ -14,7 +14,3 @@ const Prompt: React.FC<PromptProps> = ({ onNovaPartida }) => {
 };
 
 export default Prompt;
-
-
-
- 

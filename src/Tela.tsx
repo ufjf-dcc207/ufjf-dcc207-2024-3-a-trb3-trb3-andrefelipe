@@ -6,56 +6,55 @@ interface PokemonCard {
   id: string;
   name: string;
   image: string;
-  flipped: boolean;
+  virada: boolean;
   matched: boolean;
 }
 
 export default function Tela() {
   const [cards, setCards] = useState<PokemonCard[]>([]);
-  const [flippedCards, setFlippedCards] = useState<number[]>([]);
+  const [viradas, setViradas] = useState<number[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
 
-  const isCheckingRef = useRef(false); // Evita múltiplas verificações simultâneas
-  const timeoutRef = useRef<number | null>(null); // Armazena o timeout para cancelamento
+  const isCheckingRef = useRef(false);
+  const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     fetchPokemon();
   }, []);
 
   async function fetchPokemon() {
-    const totalPairs = 6;
-    const pokemonIds = Array.from({ length: totalPairs }, () => Math.floor(Math.random() * 151) + 1);
+    const totalPares = 6;
+    const pokemonIds = Array.from({ length: totalPares }, () => Math.floor(Math.random() * 151) + 1);
 
     const responses = await Promise.all(
       pokemonIds.map((id) => fetch(`https://pokeapi.co/api/v2/pokemon/${id}`).then((res) => res.json()))
     );
 
     let newCards = responses.flatMap((pokemon) => [
-      { id: pokemon.id + "A", name: pokemon.name, image: pokemon.sprites.front_default, flipped: true, matched: false },
-      { id: pokemon.id + "B", name: pokemon.name, image: pokemon.sprites.front_default, flipped: true, matched: false }
+      { id: pokemon.id + "A", name: pokemon.name, image: pokemon.sprites.front_default, virada: true, matched: false },
+      { id: pokemon.id + "B", name: pokemon.name, image: pokemon.sprites.front_default, virada: true, matched: false }
     ]);
 
     newCards = newCards.sort(() => Math.random() - 0.5);
     setCards(newCards);
 
-    // Mostrar todas as cartas viradas por 3 segundos antes de iniciar o jogo
     timeoutRef.current = window.setTimeout(() => {
-      setCards((prev) => prev.map((card) => ({ ...card, flipped: false })));
+      setCards((prev) => prev.map((card) => ({ ...card, virada: false })));
       setGameStarted(true);
     }, 3000);
   }
 
   function handleCardClick(index: number) {
-    if (!gameStarted || isCheckingRef.current || cards[index].flipped || cards[index].matched) return;
+    if (!gameStarted || isCheckingRef.current || cards[index].virada || cards[index].matched) return;
 
     const newCards = [...cards];
-    newCards[index].flipped = true;
+    newCards[index].virada = true;
     setCards(newCards);
-    setFlippedCards([...flippedCards, index]);
+    setViradas([...viradas, index]);
 
-    if (flippedCards.length === 1) {
+    if (viradas.length === 1) {
       isCheckingRef.current = true;
-      setTimeout(() => checkMatch(newCards, flippedCards[0], index), 1000);
+      setTimeout(() => checkMatch(newCards, viradas[0], index), 1000);
     }
   }
 
@@ -64,23 +63,21 @@ export default function Tela() {
       updatedCards[firstIndex].matched = true;
       updatedCards[secondIndex].matched = true;
     } else {
-      updatedCards[firstIndex].flipped = false;
-      updatedCards[secondIndex].flipped = false;
+      updatedCards[firstIndex].virada = false;
+      updatedCards[secondIndex].virada = false;
     }
 
     setCards([...updatedCards]);
-    setFlippedCards([]);
+    setViradas([]);
     isCheckingRef.current = false;
   }
 
-  // Reinicia o jogo
   function handleNovaPartida() {
     setCards([]);
-    setFlippedCards([]);
+    setViradas([]);
     setGameStarted(false);
     isCheckingRef.current = false;
 
-    // Cancela timeout anterior, se ainda estiver ativo
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -99,16 +96,15 @@ export default function Tela() {
           {cards.map((card, index) => (
             <div
               key={card.id}
-              className={`card ${card.flipped || card.matched ? "flipped" : ""}`}
+              className={`card ${card.virada || card.matched ? "virada" : ""}`}
               onClick={() => handleCardClick(index)}
             >
-              {card.flipped || card.matched ? <img src={card.image} alt={card.name} /> : "?"}
+              {card.virada || card.matched ? <img src={card.image} alt={card.name} /> : "?"}
             </div>
           ))}
         </div>
       )}
 
-      {/* Botão para iniciar nova partida */}
       <Prompt onNovaPartida={handleNovaPartida} />
     </div>
   );
