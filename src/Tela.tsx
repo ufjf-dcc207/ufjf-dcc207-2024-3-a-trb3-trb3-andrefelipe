@@ -19,7 +19,6 @@ export default function Tela() {
     fetchPokemon();
   }, []);
   
-
   async function fetchPokemon() {
     const totalPairs = 6;
     const pokemonIds = Array.from({ length: totalPairs }, () => Math.floor(Math.random() * 151) + 1);
