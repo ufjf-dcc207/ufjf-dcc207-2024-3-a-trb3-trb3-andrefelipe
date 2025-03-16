@@ -1,7 +1,5 @@
-import { useState } from 'react'
+import Tela from "./Tela";
 
-
-import './App.css'
-
-
-export default App
+export default function App() {
+  return <Tela />;
+}
