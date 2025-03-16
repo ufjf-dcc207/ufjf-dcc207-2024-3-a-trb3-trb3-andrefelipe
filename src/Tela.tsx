@@ -1,93 +1,149 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useReducer, useState } from "react";
 import "./Tela.css";
+import Prompt from "./Prompt";
 
 interface PokemonCard {
   id: string;
   name: string;
   image: string;
-  flipped: boolean;
   matched: boolean;
 }
 
-export default function Tela() {
-  const [cards, setCards] = useState<PokemonCard[]>([]);
-  const [flippedCards, setFlippedCards] = useState<number[]>([]);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
+interface State {
+  cards: PokemonCard[];
+  flippedCards: PokemonCard[];
+  matchedPairs: number;
+  isLoading: boolean;
+  canClick: boolean;
+}
 
-  useEffect(() => {
-    fetchPokemon();
-  }, []);
-  
-  async function fetchPokemon() {
+const initialState: State = {
+  cards: [],
+  flippedCards: [],
+  matchedPairs: 0,
+  isLoading: true,
+  canClick: false,
+};
+
+type Action =
+  | { type: "SET_CARDS"; payload: PokemonCard[] }
+  | { type: "FLIP_CARD"; payload: PokemonCard }
+  | { type: "CHECK_MATCH" }
+  | { type: "RESET_GAME" }
+  | { type: "ENABLE_CLICKS" };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "SET_CARDS":
+      return { ...state, cards: action.payload, isLoading: false, canClick: false };
+    case "FLIP_CARD":
+      if (!state.canClick || state.flippedCards.length >= 2 || state.flippedCards.includes(action.payload)) return state;
+      return { ...state, flippedCards: [...state.flippedCards, action.payload] };
+    case "CHECK_MATCH":
+      if (state.flippedCards.length !== 2) return state;
+      const [first, second] = state.flippedCards;
+      const isMatch = first.name === second.name;
+      return {
+        ...state,
+        cards: state.cards.map((card) =>
+          isMatch && (card.id === first.id || card.id === second.id) ? { ...card, matched: true } : card
+        ),
+        matchedPairs: isMatch ? state.matchedPairs + 1 : state.matchedPairs,
+        flippedCards: [],
+      };
+    case "RESET_GAME":
+      return initialState;
+    case "ENABLE_CLICKS":
+      return { ...state, canClick: true };
+    default:
+      return state;
+  }
+}
+
+const fetchPokemon = async (): Promise<PokemonCard[]> => {
+  try {
     const totalPairs = 6;
     const pokemonIds = Array.from({ length: totalPairs }, () => Math.floor(Math.random() * 151) + 1);
-
     const responses = await Promise.all(
       pokemonIds.map((id) => fetch(`https://pokeapi.co/api/v2/pokemon/${id}`).then((res) => res.json()))
     );
 
-    let newCards = responses.flatMap((pokemon) => [
-      { id: pokemon.id + "A", name: pokemon.name, image: pokemon.sprites.front_default, flipped: true, matched: false },
-      { id: pokemon.id + "B", name: pokemon.name, image: pokemon.sprites.front_default, flipped: true, matched: false }
+    let cards = responses.flatMap((pokemon) => [
+      { id: pokemon.id + "A", name: pokemon.name, image: pokemon.sprites.front_default, matched: false },
+      { id: pokemon.id + "B", name: pokemon.name, image: pokemon.sprites.front_default, matched: false },
     ]);
 
-    newCards = newCards.sort(() => Math.random() - 0.5);
-    setCards(newCards);
-
-    // Mostrar todas as cartas viradas por 3 segundos
-    setTimeout(() => {
-      setCards((prev) => prev.map((card) => ({ ...card, flipped: false })));
-      setGameStarted(true);
-    }, 3000);
+    return cards.sort(() => Math.random() - 0.5);
+  } catch (error) {
+    console.error("Erro ao buscar Pokémon:", error);
+    return [];
   }
+};
 
-  function handleCardClick(index: number) {
-    if (!gameStarted || isChecking || cards[index].flipped || cards[index].matched) return;
+const Tela: React.FC = () => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const [showingCards, setShowingCards] = useState(true);
 
-    const newCards = [...cards];
-    newCards[index].flipped = true;
-    setCards(newCards);
-    setFlippedCards([...flippedCards, index]);
+  useEffect(() => {
+    fetchPokemon().then((cards) => {
+      dispatch({ type: "SET_CARDS", payload: cards });
+      setShowingCards(true);
+      setTimeout(() => {
+        setShowingCards(false);
+        dispatch({ type: "ENABLE_CLICKS" });
+      }, 3000); // Mostra as cartas por 3 segundos antes de começar
+    });
+  }, []);
 
-    if (flippedCards.length === 1) {
-      setIsChecking(true);
-      setTimeout(() => checkMatch(newCards, flippedCards[0], index), 1000);
+  const handleCardClick = (card: PokemonCard) => {
+    if (!state.canClick || state.flippedCards.length >= 2 || card.matched) return;
+
+    dispatch({ type: "FLIP_CARD", payload: card });
+
+    if (state.flippedCards.length === 1) {
+      setTimeout(() => dispatch({ type: "CHECK_MATCH" }), 1000);
     }
-  }
+  };
 
-  function checkMatch(updatedCards: PokemonCard[], firstIndex: number, secondIndex: number) {
-    if (updatedCards[firstIndex].name === updatedCards[secondIndex].name) {
-      updatedCards[firstIndex].matched = true;
-      updatedCards[secondIndex].matched = true;
-    } else {
-      updatedCards[firstIndex].flipped = false;
-      updatedCards[secondIndex].flipped = false;
-    }
-
-    setCards([...updatedCards]);
-    setFlippedCards([]);
-    setIsChecking(false);
-  }
+  const handleNovaPartida = () => {
+    dispatch({ type: "RESET_GAME" });
+    fetchPokemon().then((cards) => {
+      dispatch({ type: "SET_CARDS", payload: cards });
+      setShowingCards(true);
+      setTimeout(() => {
+        setShowingCards(false);
+        dispatch({ type: "ENABLE_CLICKS" });
+      }, 3000);
+    });
+  };
 
   return (
-    <div className="container">
+    <div className="game-container">
       <h1>Jogo da Memória Pokémon</h1>
-      {cards.length === 0 ? (
-        <p>Carregando...</p>
+      {state.isLoading ? (
+        <p>Carregando Pokémon...</p>
       ) : (
         <div className="grid">
-          {cards.map((card, index) => (
+          {state.cards.map((card) => (
             <div
               key={card.id}
-              className={`card ${card.flipped || card.matched ? "flipped" : ""}`}
-              onClick={() => handleCardClick(index)}
+              className={`card ${showingCards || state.flippedCards.includes(card) || card.matched ? "flipped" : ""}`}
+              onClick={() => handleCardClick(card)}
             >
-              {card.flipped || card.matched ? <img src={card.image} alt={card.name} /> : "?"}
+              {showingCards || state.flippedCards.includes(card) || card.matched ? (
+                <img src={card.image} alt={card.name} />
+              ) : (
+                <span className="hidden">?</span>
+              )}
             </div>
           ))}
         </div>
       )}
+
+      {/* Botão para nova partida */}
+      <Prompt onNovaPartida={handleNovaPartida} />
     </div>
   );
-}
+};
+
+export default Tela;
