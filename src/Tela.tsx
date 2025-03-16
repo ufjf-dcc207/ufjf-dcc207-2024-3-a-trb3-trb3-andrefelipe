@@ -1,149 +1,115 @@
-import React, { useEffect, useReducer, useState } from "react";
-import "./Tela.css";
+import { useEffect, useState, useRef } from "react";
 import Prompt from "./Prompt";
+import "./Tela.css";
 
 interface PokemonCard {
   id: string;
   name: string;
   image: string;
+  flipped: boolean;
   matched: boolean;
 }
 
-interface State {
-  cards: PokemonCard[];
-  flippedCards: PokemonCard[];
-  matchedPairs: number;
-  isLoading: boolean;
-  canClick: boolean;
-}
+export default function Tela() {
+  const [cards, setCards] = useState<PokemonCard[]>([]);
+  const [flippedCards, setFlippedCards] = useState<number[]>([]);
+  const [gameStarted, setGameStarted] = useState(false);
 
-const initialState: State = {
-  cards: [],
-  flippedCards: [],
-  matchedPairs: 0,
-  isLoading: true,
-  canClick: false,
-};
+  const isCheckingRef = useRef(false); // Evita múltiplas verificações simultâneas
+  const timeoutRef = useRef<number | null>(null); // Armazena o timeout para cancelamento
 
-type Action =
-  | { type: "SET_CARDS"; payload: PokemonCard[] }
-  | { type: "FLIP_CARD"; payload: PokemonCard }
-  | { type: "CHECK_MATCH" }
-  | { type: "RESET_GAME" }
-  | { type: "ENABLE_CLICKS" };
+  useEffect(() => {
+    fetchPokemon();
+  }, []);
 
-function reducer(state: State, action: Action): State {
-  switch (action.type) {
-    case "SET_CARDS":
-      return { ...state, cards: action.payload, isLoading: false, canClick: false };
-    case "FLIP_CARD":
-      if (!state.canClick || state.flippedCards.length >= 2 || state.flippedCards.includes(action.payload)) return state;
-      return { ...state, flippedCards: [...state.flippedCards, action.payload] };
-    case "CHECK_MATCH":
-      if (state.flippedCards.length !== 2) return state;
-      const [first, second] = state.flippedCards;
-      const isMatch = first.name === second.name;
-      return {
-        ...state,
-        cards: state.cards.map((card) =>
-          isMatch && (card.id === first.id || card.id === second.id) ? { ...card, matched: true } : card
-        ),
-        matchedPairs: isMatch ? state.matchedPairs + 1 : state.matchedPairs,
-        flippedCards: [],
-      };
-    case "RESET_GAME":
-      return initialState;
-    case "ENABLE_CLICKS":
-      return { ...state, canClick: true };
-    default:
-      return state;
-  }
-}
-
-const fetchPokemon = async (): Promise<PokemonCard[]> => {
-  try {
+  async function fetchPokemon() {
     const totalPairs = 6;
     const pokemonIds = Array.from({ length: totalPairs }, () => Math.floor(Math.random() * 151) + 1);
+
     const responses = await Promise.all(
       pokemonIds.map((id) => fetch(`https://pokeapi.co/api/v2/pokemon/${id}`).then((res) => res.json()))
     );
 
-    let cards = responses.flatMap((pokemon) => [
-      { id: pokemon.id + "A", name: pokemon.name, image: pokemon.sprites.front_default, matched: false },
-      { id: pokemon.id + "B", name: pokemon.name, image: pokemon.sprites.front_default, matched: false },
+    let newCards = responses.flatMap((pokemon) => [
+      { id: pokemon.id + "A", name: pokemon.name, image: pokemon.sprites.front_default, flipped: true, matched: false },
+      { id: pokemon.id + "B", name: pokemon.name, image: pokemon.sprites.front_default, flipped: true, matched: false }
     ]);
 
-    return cards.sort(() => Math.random() - 0.5);
-  } catch (error) {
-    console.error("Erro ao buscar Pokémon:", error);
-    return [];
+    newCards = newCards.sort(() => Math.random() - 0.5);
+    setCards(newCards);
+
+    // Mostrar todas as cartas viradas por 3 segundos antes de iniciar o jogo
+    timeoutRef.current = window.setTimeout(() => {
+      setCards((prev) => prev.map((card) => ({ ...card, flipped: false })));
+      setGameStarted(true);
+    }, 3000);
   }
-};
 
-const Tela: React.FC = () => {
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const [showingCards, setShowingCards] = useState(true);
+  function handleCardClick(index: number) {
+    if (!gameStarted || isCheckingRef.current || cards[index].flipped || cards[index].matched) return;
 
-  useEffect(() => {
-    fetchPokemon().then((cards) => {
-      dispatch({ type: "SET_CARDS", payload: cards });
-      setShowingCards(true);
-      setTimeout(() => {
-        setShowingCards(false);
-        dispatch({ type: "ENABLE_CLICKS" });
-      }, 3000); // Mostra as cartas por 3 segundos antes de começar
-    });
-  }, []);
+    const newCards = [...cards];
+    newCards[index].flipped = true;
+    setCards(newCards);
+    setFlippedCards([...flippedCards, index]);
 
-  const handleCardClick = (card: PokemonCard) => {
-    if (!state.canClick || state.flippedCards.length >= 2 || card.matched) return;
-
-    dispatch({ type: "FLIP_CARD", payload: card });
-
-    if (state.flippedCards.length === 1) {
-      setTimeout(() => dispatch({ type: "CHECK_MATCH" }), 1000);
+    if (flippedCards.length === 1) {
+      isCheckingRef.current = true;
+      setTimeout(() => checkMatch(newCards, flippedCards[0], index), 1000);
     }
-  };
+  }
 
-  const handleNovaPartida = () => {
-    dispatch({ type: "RESET_GAME" });
-    fetchPokemon().then((cards) => {
-      dispatch({ type: "SET_CARDS", payload: cards });
-      setShowingCards(true);
-      setTimeout(() => {
-        setShowingCards(false);
-        dispatch({ type: "ENABLE_CLICKS" });
-      }, 3000);
-    });
-  };
+  function checkMatch(updatedCards: PokemonCard[], firstIndex: number, secondIndex: number) {
+    if (updatedCards[firstIndex].name === updatedCards[secondIndex].name) {
+      updatedCards[firstIndex].matched = true;
+      updatedCards[secondIndex].matched = true;
+    } else {
+      updatedCards[firstIndex].flipped = false;
+      updatedCards[secondIndex].flipped = false;
+    }
+
+    setCards([...updatedCards]);
+    setFlippedCards([]);
+    isCheckingRef.current = false;
+  }
+
+  // Reinicia o jogo
+  function handleNovaPartida() {
+    setCards([]);
+    setFlippedCards([]);
+    setGameStarted(false);
+    isCheckingRef.current = false;
+
+    // Cancela timeout anterior, se ainda estiver ativo
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    fetchPokemon();
+  }
 
   return (
-    <div className="game-container">
+    <div className="container">
       <h1>Jogo da Memória Pokémon</h1>
-      {state.isLoading ? (
-        <p>Carregando Pokémon...</p>
+      {cards.length === 0 ? (
+        <p>Carregando...</p>
       ) : (
         <div className="grid">
-          {state.cards.map((card) => (
+          {cards.map((card, index) => (
             <div
               key={card.id}
-              className={`card ${showingCards || state.flippedCards.includes(card) || card.matched ? "flipped" : ""}`}
-              onClick={() => handleCardClick(card)}
+              className={`card ${card.flipped || card.matched ? "flipped" : ""}`}
+              onClick={() => handleCardClick(index)}
             >
-              {showingCards || state.flippedCards.includes(card) || card.matched ? (
-                <img src={card.image} alt={card.name} />
-              ) : (
-                <span className="hidden">?</span>
-              )}
+              {card.flipped || card.matched ? <img src={card.image} alt={card.name} /> : "?"}
             </div>
           ))}
         </div>
       )}
 
-      {/* Botão para nova partida */}
+      {/* Botão para iniciar nova partida */}
       <Prompt onNovaPartida={handleNovaPartida} />
     </div>
   );
-};
-
-export default Tela;
+}
