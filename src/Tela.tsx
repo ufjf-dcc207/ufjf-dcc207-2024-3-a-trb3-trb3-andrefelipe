@@ -2,7 +2,7 @@ import { useEffect, useReducer, useRef } from "react";
 import Prompt from "./Prompt";
 import "./Tela.css";
 
-// Definição do estado inicial
+
 interface PokemonCard {
   id: string;
   name: string;
@@ -17,14 +17,14 @@ interface GameState {
   gameStarted: boolean;
 }
 
-// Estado inicial do jogo
+
 const initialState: GameState = {
   cards: [],
   viradas: [],
   gameStarted: false,
 };
 
-// Definição das ações do reducer
+
 type Action =
   | { type: "SET_CARDS"; payload: PokemonCard[] }
   | { type: "FLIP_CARD"; payload: number }
@@ -32,7 +32,7 @@ type Action =
   | { type: "RESET_GAME" }
   | { type: "START_GAME" };
 
-// Função reducer para gerenciar o estado do jogo
+
 function gameReducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "SET_CARDS":
