@@ -1,4 +1,3 @@
-/* Centraliza a tela */
 .container {
     display: flex;
     flex-direction: column;
@@ -8,51 +7,67 @@
     width: 100vw;
     background-color: #f8f8f8;
     text-align: center;
-  }
-  
-  /* Ajusta o título */
-  h1 {
+}
+
+h1 {
     font-size: 24px;
     color: #444;
     margin-bottom: 20px;
-  }
-  
-  /* Centraliza o grid no meio */
-  .grid {
+}
+
+.grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 15px;
     justify-content: center;
     align-items: center;
     max-width: 450px;
-    margin: 0 auto; /* Centraliza horizontalmente */
-  }
-  
-  /* Estilização das cartas */
-  .card {
+    margin: 0 auto;
+}
+
+.card {
     width: 100px;
     height: 100px;
-    background: #ffcb05;
+    position: relative;
+    perspective: 1000px;
+    cursor: pointer;
+}
+
+.card-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease-in-out;
+}
+
+.card.virada .card-inner {
+    transform: rotateY(180deg);
+}
+
+.card-front,
+.card-back {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    font-size: 24px;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s, background 0.3s;
-  }
-  
-  .card.flipped {
+    backface-visibility: hidden;
+}
+
+.card-front {
     background: white;
     transform: rotateY(180deg);
-  }
-  
-  
-  .card img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    padding: 5px;
-  }
-  
+}
+
+.card-back {
+    background: #ffcb05;
+    color: white;
+    font-size: 36px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
