@@ -12,7 +12,7 @@ interface PokemonCard {
 
 export default function Tela() {
   const [cards, setCards] = useState<PokemonCard[]>([]);
-  const [viradas, setViradas] = useState<number[]>([]);
+  const [flippedCards, setFlippedCards] = useState<number[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
 
   const isCheckingRef = useRef(false);
@@ -50,11 +50,11 @@ export default function Tela() {
     const newCards = [...cards];
     newCards[index].virada = true;
     setCards(newCards);
-    setViradas([...viradas, index]);
+    setFlippedCards([...flippedCards, index]);
 
-    if (viradas.length === 1) {
+    if (flippedCards.length === 1) {
       isCheckingRef.current = true;
-      setTimeout(() => checkMatch(newCards, viradas[0], index), 1000);
+      setTimeout(() => checkMatch(newCards, flippedCards[0], index), 1000);
     }
   }
 
@@ -68,13 +68,13 @@ export default function Tela() {
     }
 
     setCards([...updatedCards]);
-    setViradas([]);
+    setFlippedCards([]);
     isCheckingRef.current = false;
   }
 
   function handleNovaPartida() {
     setCards([]);
-    setViradas([]);
+    setFlippedCards([]);
     setGameStarted(false);
     isCheckingRef.current = false;
 
@@ -96,7 +96,7 @@ export default function Tela() {
           {cards.map((card, index) => (
             <div
               key={card.id}
-              className={`card ${card.virada || card.matched ? "virada" : ""}`}
+              className={`card ${card.virada || card.matched ? "flipped" : ""}`}
               onClick={() => handleCardClick(index)}
             >
               {card.virada || card.matched ? <img src={card.image} alt={card.name} /> : "?"}
